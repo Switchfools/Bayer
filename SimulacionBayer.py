@@ -108,7 +108,7 @@ class Mundo():
         #Personas Que no estan trabajando
         self.AbletoWork=AbletoWork
         self.MaximunPerDay=MaximunPerDay
-    def CreateMap(self,NumberOfBuildigs, DimensionBuildings):
+    def CreateMap(self,NumberOfBuildigs, DimensionBuildings,estrategia):
         DimensionHouses=np.array([4,4])
         SizeBetweenBuildings= 4
         SpaceBetweenHouses=1
@@ -135,7 +135,7 @@ class Mundo():
             for j in range(ceil((self.population/ceil(self.size_y/(DimensionHouses[1]+2*SpaceBetweenHouses))))):
                 someX, someY = someX+DimensionHouses[0]/2+SpaceBetweenHouses, someY
                 if(counter<500):
-                    p=Persona(x=someX, y=someY, xc=someX, yc=someY, grupo=np.random.randint(3), trabajo=0,coordTrabajo=(DimensionBuildings[0],self.size_y/2), publicTransport=np.random.randint(2))
+                    p=Persona(x=someX, y=someY, xc=someX, yc=someY, grupo=self.GroupsByestrategy(estrategia), trabajo=0,coordTrabajo=(DimensionBuildings[0],self.size_y/2), publicTransport=np.random.randint(2))
                     Persons.append(p)
                 currentAxis.add_patch(Rectangle((someX-DimensionHouses[0]/2, someY-DimensionHouses[1]/2), DimensionHouses[0], DimensionHouses[1],fill=None))
                 someX, someY = someX+DimensionHouses[0]/2, someY
@@ -145,20 +145,38 @@ class Mundo():
         plt.savefig("Map.png",bbox_inches='tight', pad_inches=0,transparent=True)
         self.Persons=Persons
         return(Persons)
-
+    def GroupsByestrategy(self,estrategia):
+        if(estrategia==0):
+        #Progressive returns by groups
+            group=np.random.choice(3, p=[60/500, (60+250)/500, (500-2*60-250)/500])
+        elif(estrategia==1):
+        #doing nothing at all, everyone comes back to work
+            group=0
+        elif(estrategia==2):
+            group=np.random.choice(5)
+        return(group)
     def Estrategia(self,estrategia,p):
         if(estrategia==0):
-            if(p.grupo==0 and self.day>=0):
-                p.moverseHacia("Trabajo")
-            elif(p.grupo==1 and self.day>=5):
-                p.moverseHacia("Trabajo")
-            elif(p.grupo==2 and self.day>=10):
-                p.moverseHacia("Trabajo")
+        #Progressive returns by groups
+            if(self.day%7<5):
+                if(p.grupo==0 and self.day>=0):
+                    p.moverseHacia("Trabajo")
+                elif(p.grupo==1 and self.day>=5):
+                    p.moverseHacia("Trabajo")
+                elif(p.grupo==2 and self.day>=10):
+                    p.moverseHacia("Trabajo")
         elif(estrategia==1):
-            pass
+            #doing nothing at all, everyone comes back to work, but resting on weekends
+            if((self.day%7)<5):
+                p.moverseHacia("Trabajo")
+        elif(estrategia==2):
+            if(p.grupo==self.day%7):
+                p.moverseHacia("Trabajo")
 
 
-    def Step(self):
+
+
+    def Step(self,estrategia):
         self.asintomatics_x= []
         self.asintomatics_y= []
         self.sicks_x = []
@@ -227,12 +245,12 @@ class Mundo():
                     self.healthy_y.append(p.y)
                     if(p.EnCasa()):
                         est=p.enfermarse(probability(self.probs[4]))
-                        self.Estrategia(0,p)
+                        self.Estrategia(estrategia,p)
                         self.Ninfected+=est
                         self.Nhealt-=est
                     elif(p.EnTrabajo()):
                         p.moverse()
-                        cercaInfectado=np.less(D[i,infecteds],3)
+                        cercaInfectado=np.less(D[i,infecteds],1.8)
                         if(np.sum(cercaInfectado)>0):
                             #hace falta calcular las distancias
                             est=p.enfermarse(self.probs[3])
@@ -257,7 +275,7 @@ class Mundo():
                     if(p.EnTrabajo()):
                         p.moverse()
                     elif (p.EnCasa()):
-                        self.Estrategia(0,p)
+                        self.Estrategia(estrategia,p)
                     else:
                         p.moverseHacia("Trabajo")
 
@@ -318,7 +336,7 @@ def init():
 def animate(i):
     """perform animation step"""
     global MiMundo,Persons, ax, fig,DataCurve
-    a=MiMundo.Step()
+    a=MiMundo.Step(estrategia=0)
     if(a!=None):
         S.append(a[0])
         I.append(a[1])
@@ -341,8 +359,9 @@ if __name__ == "__main__":
     population=500
     days=30
     #this is an array for the rates related to the probabilities [probSymptoms,probGetHeal,probDie,prob_getsick, prob_getsick_at_home,prob_getsick_in_public_transport]
-    LongTermSicks=(0.4*population)/days
-    probs=[(0.6*LongTermSicks)/days,(0.2347*LongTermSicks)/days,(0.0621*LongTermSicks)/days,0.8,(0.05*LongTermSicks)/days, (0.8*LongTermSicks)/days]
+    LongTermSicks=(0.01*population)
+    probs=[(0.7*LongTermSicks)/days,(0.2514*LongTermSicks)/days,(0.0621*LongTermSicks)/days,0.3,(0.05*LongTermSicks)/days, (0.6*LongTermSicks)/days]
+    print(probability(np.array(probs)))
     MiMundo=Mundo(population=population,days=days,LaborSchedule=LaborSchedule,probs=probs)
     #We Strat the simulation
     #MiMundo.SimulateWithDraw(Persons,LaborSchedule,probs)
@@ -350,7 +369,7 @@ if __name__ == "__main__":
     fig = plt.figure()
     spec = gridspec.GridSpec(ncols=1, nrows=2,height_ratios=[5,2])
     ax = fig.add_subplot(spec[0])
-    Persons=MiMundo.CreateMap(3,(10,40))
+    Persons=MiMundo.CreateMap(3,(10,40),estrategia=0)
     S=[]
     I=[]
     M=[]
