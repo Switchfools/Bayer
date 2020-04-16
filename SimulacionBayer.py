@@ -43,21 +43,21 @@ class Persona():
 
 
     def moverse(self):
-        self.x=np.mod(self.x+np.random.randint(-1,2),self.coordTrabajo[0])
-        self.y=np.mod(self.y+np.random.randint(-1,2),self.coordTrabajo[1]*2)
+        self.x=np.mod(self.x+np.random.randint(-1,2),self.coordTrabajo[2])
+        self.y=np.mod(self.y+np.random.randint(-1,2),self.coordTrabajo[3])
 
     def cambiar(self,probSymptoms,probGetHeal,probDie):
         if (self.est> 0):
-            if (np.random.rand()<probSymptoms):
+            if (np.random.rand()<probability(np.abs(self.est)*probSymptoms)):
                 self.est=-1
-            elif(np.random.rand()<probGetHeal):
+            elif(np.random.rand()<probability(np.abs(self.est)*probGetHeal)):
                 self.est=0
             else:
                 self.est+=1
         elif (self.est < 0):
-            if (np.random.rand()<probGetHeal):
+            if (np.random.rand()<probability(np.abs(self.est)*probGetHeal)):
                 self.est=0
-            elif(np.random.rand()<probDie):
+            elif(np.random.rand()<probability(np.abs(self.est)*probDie)):
                 self.est=None
             else:
                 self.est-=1
@@ -135,7 +135,7 @@ class Mundo():
             for j in range(ceil((self.population/ceil(self.size_y/(DimensionHouses[1]+2*SpaceBetweenHouses))))):
                 someX, someY = someX+DimensionHouses[0]/2+SpaceBetweenHouses, someY
                 if(counter<500):
-                    p=Persona(x=someX, y=someY, xc=someX, yc=someY, grupo=self.GroupsByestrategy(estrategia), trabajo=0,coordTrabajo=(DimensionBuildings[0],self.size_y/2), publicTransport=np.random.randint(2))
+                    p=Persona(x=someX, y=someY, xc=someX, yc=someY, grupo=self.GroupsByestrategy(estrategia), trabajo=0,coordTrabajo=[np.random.randint(DimensionBuildings[0]),np.random.randint(self.size_y),DimensionBuildings[0],self.size_y], publicTransport=np.random.randint(2))
                     Persons.append(p)
                 currentAxis.add_patch(Rectangle((someX-DimensionHouses[0]/2, someY-DimensionHouses[1]/2), DimensionHouses[0], DimensionHouses[1],fill=None))
                 someX, someY = someX+DimensionHouses[0]/2, someY
@@ -202,7 +202,7 @@ class Mundo():
                 elif(p.est>0):
                     self.asintomatics_x.append(p.x)
                     self.asintomatics_y.append(p.y)
-                    state=p.cambiar(probability(probs[0]),probability(probs[1]),probability(probs[2]))
+                    state=p.cambiar(probs[0],probs[1],probs[2])
                     if(state==None):
                         self.Persons.remove(p)
                         self.Ninfected-=1
@@ -217,7 +217,7 @@ class Mundo():
                 else:
                     self.sicks_x.append(p.x)
                     self.sicks_y.append(p.y)
-                    state=p.cambiar(probability(probs[0]),probability(probs[1]),probability(probs[2]))
+                    state=p.cambiar(probs[0],probs[1],probs[2])
                     if(state==None):
                         self.Persons.remove(p)
                         self.Ninfected-=1
@@ -264,7 +264,7 @@ class Mundo():
                 elif(p.est>0):
                     self.asintomatics_x.append(p.x)
                     self.asintomatics_y.append(p.y)
-                    state=p.cambiar(probability(probs[0]),probability(probs[1]),probability(probs[2]))
+                    state=p.cambiar(probs[0],probs[1],probs[2])
                     if(state==None):
                         self.Persons.remove(p)
                         self.Ninfected-=1
@@ -282,7 +282,7 @@ class Mundo():
                 else:
                     self.sicks_x.append(p.x)
                     self.sicks_y.append(p.y)
-                    state=p.cambiar(probability(probs[0]),probability(probs[1]),probability(probs[2]))
+                    state=p.cambiar(probs[0],probs[1],probs[2])
                     if(state==None):
                         self.Persons.remove(p)
                         self.Ninfected-=1
@@ -305,13 +305,13 @@ class Mundo():
             if(self.hour==24):
                 self.hour=0
                 self.day+=1
+                return(self.Nhealt,self.Ninfected,self.Ndead,self.MaximunPerDay)
                 self.MaximunPerDay=0
                 for p in self.Persons:
                     if(p.est>0):
                         p.est+=1
                     elif(p.est<0):
                         p.est-=1
-        return(self.Nhealt,self.Ninfected,self.Ndead,self.MaximunPerDay)
             #people at either at wrok, moving, or in their own houses depending on the group
 
 
@@ -336,7 +336,7 @@ def init():
 def animate(i):
     """perform animation step"""
     global MiMundo,Persons, ax, fig,DataCurve
-    a=MiMundo.Step(estrategia=0)
+    a=MiMundo.Step(estrategia=1)
     if(a!=None):
         S.append(a[0])
         I.append(a[1])
@@ -359,17 +359,17 @@ if __name__ == "__main__":
     population=500
     days=30
     #this is an array for the rates related to the probabilities [probSymptoms,probGetHeal,probDie,prob_getsick, prob_getsick_at_home,prob_getsick_in_public_transport]
-    LongTermSicks=(0.01*population)
-    probs=[(0.7*LongTermSicks)/days,(0.2514*LongTermSicks)/days,(0.0621*LongTermSicks)/days,0.3,(0.05*LongTermSicks)/days, (0.6*LongTermSicks)/days]
+    LongTermSicks=(0.0000001*population)
+    probs=[(0.4*LongTermSicks)/days,(0.2514*LongTermSicks)/days,(0.000621*LongTermSicks)/days,0.3,(0.05*LongTermSicks)/days, (0.6*LongTermSicks)/days]
     print(probability(np.array(probs)))
-    MiMundo=Mundo(population=population,days=days,LaborSchedule=LaborSchedule,probs=probs)
+    #MiMundo=Mundo(population=population,days=days,LaborSchedule=LaborSchedule,probs=probs)
     #We Strat the simulation
     #MiMundo.SimulateWithDraw(Persons,LaborSchedule,probs)
-
+    '''
     fig = plt.figure()
     spec = gridspec.GridSpec(ncols=1, nrows=2,height_ratios=[5,2])
     ax = fig.add_subplot(spec[0])
-    Persons=MiMundo.CreateMap(3,(10,40),estrategia=0)
+    Persons=MiMundo.CreateMap(3,(10,40),estrategia=1)
     S=[]
     I=[]
     M=[]
@@ -391,7 +391,7 @@ if __name__ == "__main__":
     plt.show()
     print(M[-1])
     '''
-    Samples=10
+    Samples=3
     s=np.zeros(30)
     i=np.zeros(30)
     m=np.zeros(30)
@@ -402,9 +402,9 @@ if __name__ == "__main__":
         M=[]
         T=[]
         MiMundo=Mundo(population=population,days=days,LaborSchedule=LaborSchedule,probs=probs)
-        Persons=MiMundo.CreateMap(3,(10,40))
+        Persons=MiMundo.CreateMap(3,(10,40),estrategia=1)
         while(MiMundo.day<days):
-            a=MiMundo.Step()
+            a=MiMundo.Step(estrategia=1)
             if(a!=None):
                 S.append(a[0])
                 I.append(a[1])
@@ -423,6 +423,8 @@ if __name__ == "__main__":
     plt.plot(dias,i/Samples,c="orange", label='Infectados')
     plt.plot(dias,m/Samples,c="red", label='muertos')
     plt.plot(dias,t/Samples,c="teal", label='Trabajando')
+    plt.legend()
+    plt.grid()
+    plt.title("Promedio Simulaciones para estrategia 1")
     plt.savefig("Experimento_Estrategia_1.pdf")
     plt.show()
-    '''
